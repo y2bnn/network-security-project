@@ -1,0 +1,68 @@
+# ==============================================================================
+# [담당자: 1번 팀장 (네트워크 구성)]
+# [용도: DMZ 3계층 망 분리 및 전체 보안 컨테이너 통합 실행 컴포즈 파일]
+# ==============================================================================
+version: '3.8'
+
+services:
+  # 1. 방화벽 컨테이너 (3번 방화벽 & 4번 접근제어 담당자 작업 대상)
+  firewall:
+    build: ./firewall
+    container_name: secure-firewall
+    ports:
+      - "80:80"           # 외부 웹 트래픽 수신 (웹서버로 포워딩)
+      - "2222:22"         # 관리자 대역 SSH 접속 포트
+    cap_add:
+      - NET_ADMIN         # iptables 제어 권한 부여
+    networks:
+      public-net:
+        ipv4_address: 172.20.0.2
+      dmz-net:
+        ipv4_address: 172.30.0.2
+      admin-net:
+        ipv4_address: 10.0.0.2
+
+  # 2. 웹서버 컨테이너 (2번 웹서버 담당자 작업 대상)
+  web-server:
+    build: ./web-server
+    container_name: secure-web
+    expose:
+      - "80"              # 외부 노출 없이 DMZ 내부 망에서만 80번 포트 개방
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 5s
+      retries: 3
+    restart: always       # Auto-Healing: 웹서버 장애/강제종료 발생 시 5초 내 자동 재시작
+    networks:
+      dmz-net:
+        ipv4_address: 172.30.0.10
+
+  # 3. 보안 관제 대시보드 (Portainer)
+  admin-dashboard:
+    image: portainer/portainer-ce:latest
+    container_name: secure-dashboard
+    ports:
+      # 외부 스캔(nmap) 차단을 위해 로컬(127.0.0.1) 호스트에서만 접속 허용
+      - "127.0.0.1:9000:9000"
+    networks:
+      admin-net:
+        ipv4_address: 10.0.0.5
+
+# DMZ 3계층 가상 네트워크 설계
+networks:
+  public-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+  dmz-net:
+    driver: bridge
+    internal: true        # 외부 인터넷 직접 출입 차단 (격리된 DMZ)
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+  admin-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.0.0/24
