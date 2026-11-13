@@ -13,6 +13,17 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+#[4] SSH 관리자 계정 생성
+RUN useradd --create-home --shell /bin/bash admin \
+    && usermod -aG sudo admin \
+    && mkdir -p /run/sshd
+
+#[4] SSH 관리자 인증 설정 복사
+COPY sshd-admin.conf /etc/ssh/sshd_config.d/00-admin.conf
+
+#[4] Fail2ban SSH 차단 정책 복사
+COPY sshd-jail.conf /etc/fail2ban/jail.d/sshd.local
+
 # 실행 스크립트 복사
 COPY setup-rules.sh /usr/local/bin/setup-rules.sh
 RUN chmod +x /usr/local/bin/setup-rules.sh
