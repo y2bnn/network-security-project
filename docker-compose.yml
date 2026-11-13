@@ -27,7 +27,7 @@ services:
     expose:
       - "80"              # 외부 노출 없이 DMZ 내부 망에서만 80번 포트 개방
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/"]
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: 5s
       retries: 3
     restart: always       # Auto-Healing: 웹서버 장애/강제종료 발생 시 5초 내 자동 재시작
