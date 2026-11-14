@@ -1,0 +1,19 @@
+services:
+  firewall:
+    ports: !reset []
+
+  admin-client:
+    build: ./firewall
+    command: ["sleep", "infinity"]
+    cap_add: []
+    networks:
+      admin-net:
+        ipv4_address: 10.0.0.10
+
+  other-client:
+    build: ./firewall
+    command: ["sleep", "infinity"]
+    cap_add: []
+    networks:
+      admin-net:
+        ipv4_address: 10.0.0.11
